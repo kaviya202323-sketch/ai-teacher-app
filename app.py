@@ -76,8 +76,8 @@ def get_ai_response(user_query):
 
 # --- SIDEBAR ---
 with st.sidebar:
-    st.image("https://cdn-icons-png.flaticon.com/512/3426/3426653.png", width=100)
-    st.title("University AI Portal")
+    st.image("https://aadhi.rajalakshmi.org/_next/image?url=%2Fassets%2Fmascot.png&w=256&q=75", width=100)
+    st.title("Rajalakshmi AI Portal")
     role = st.radio("Select Dashboard:", ["Student View", "Faculty View"])
     st.markdown("---")
     st.caption("v1.3 Secure Edition | Database Active")
