@@ -27,7 +27,6 @@ st.markdown("""
 
 # --- DATABASE FUNCTIONS ---
 def init_db():
-    """Creates the database and table if they don't exist."""
     conn = sqlite3.connect('classroom_data.db')
     c = conn.cursor()
     c.execute('''
@@ -42,7 +41,6 @@ def init_db():
     conn.close()
 
 def save_interaction(topic, query):
-    """Saves a new student doubt to the database."""
     conn = sqlite3.connect('classroom_data.db')
     c = conn.cursor()
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -52,20 +50,19 @@ def save_interaction(topic, query):
     conn.close()
 
 def load_data():
-    """Loads all data for the faculty dashboard."""
     conn = sqlite3.connect('classroom_data.db')
     df = pd.read_sql_query("SELECT * FROM interactions", conn)
     conn.close()
     return df
 
-# Initialize DB on startup
+# Initialize DB
 init_db()
 
 # --- AI LOGIC ---
 def get_ai_response(user_query):
     user_query = user_query.lower()
     
-    # Simple Topic Detection Logic
+    # Topic Detection
     topic = "General"
     if any(word in user_query for word in ["variable", "python", "code", "function", "loop"]):
         topic = "Computing"
@@ -83,14 +80,13 @@ with st.sidebar:
     st.title("University AI Portal")
     role = st.radio("Select Dashboard:", ["Student View", "Faculty View"])
     st.markdown("---")
-    st.caption("v1.2 Pro Edition | Database Active")
+    st.caption("v1.3 Secure Edition | Database Active")
 
 # --- STUDENT PAGE ---
 if role == "Student View":
     st.markdown('<div class="main-header">🎓 Student Learning Hub</div>', unsafe_allow_html=True)
     st.write("Welcome! Ask your questions below. Your professor will use this data to improve classes.")
     
-    # Initialize chat history in session (just for display during session)
     if 'chat_history' not in st.session_state:
         st.session_state['chat_history'] = []
 
@@ -99,62 +95,63 @@ if role == "Student View":
             st.markdown(msg["content"])
 
     if prompt := st.chat_input("I have a doubt about..."):
-        # Show User Message
         st.session_state['chat_history'].append({"role": "user", "content": prompt})
         with st.chat_message("user"):
             st.markdown(prompt)
 
-        # Generate & Save
         with st.chat_message("assistant"):
             response, topic = get_ai_response(prompt)
             st.markdown(response)
-            
-            # SAVE TO DATABASE PERMANENTLY
             save_interaction(topic, prompt)
             
         st.session_state['chat_history'].append({"role": "assistant", "content": response})
 
-# --- FACULTY PAGE ---
+# --- FACULTY PAGE (SECURE) ---
 elif role == "Faculty View":
     st.markdown('<div class="main-header">👨‍🏫 Faculty Insights Dashboard</div>', unsafe_allow_html=True)
     
+    # --- PASSWORD PROTECTION ---
+    password = st.text_input("Enter Faculty Password to Access:", type="password")
+    
+    if password != "1234":
+        st.info("🔒 **Access Restricted**: Only authorized faculty members can view this dashboard.")
+        st.stop()  # STOPS the code here if password is wrong
+        
+    # --- IF PASSWORD IS CORRECT, SHOW DASHBOARD ---
     df = load_data()
     
     if df.empty:
-        st.info("👋 No data yet. Switch to Student View and ask some questions to populate the database.")
+        st.info("👋 No data yet. Switch to Student View and ask questions.")
     else:
-        # 1. Metrics Row
+        # Metrics
         col1, col2, col3 = st.columns(3)
         top_topic = df['topic'].mode()[0]
         
         with col1:
-            st.metric(label="Total Questions", value=len(df), delta="All Time")
+            st.metric("Total Questions", len(df))
         with col2:
-            st.metric(label="Primary Learning Gap", value=top_topic, delta="Needs Attention")
+            st.metric("Primary Learning Gap", top_topic)
         with col3:
             recent_time = pd.to_datetime(df['timestamp']).max()
-            st.metric(label="Last Activity", value=recent_time.strftime("%H:%M"))
+            st.metric("Last Activity", recent_time.strftime("%H:%M"))
 
         st.markdown("---")
 
-        # 2. Recommendation Engine (Styled)
+        # Recommendation
         recommendations = {
-            "Computing": "🔴 **Critical Gap:** Students are struggling with Python Syntax.\n\n**Action Plan:** Schedule a live coding workshop for variables and loops.",
-            "Humanities": "🟠 **Moderate Gap:** Students are confused about Timelines.\n\n**Action Plan:** Upload a visual timeline chart to the portal.",
-            "Education": "🟢 **Admin Gap:** Students have exam queries.\n\n**Action Plan:** Send an announcement clarifying the grading rubric.",
-            "General": "⚪ **Monitoring:** No specific trend detected yet."
+            "Computing": "🔴 **Critical Gap:** Students struggling with Python Syntax. **Action:** Schedule live coding.",
+            "Humanities": "🟠 **Moderate Gap:** Confusion on Timelines. **Action:** Upload timeline chart.",
+            "Education": "🟢 **Admin Gap:** Exam queries. **Action:** Clarify grading rubric.",
+            "General": "⚪ **Monitoring:** No specific trend."
         }
         advice = recommendations.get(top_topic, "Review recent questions.")
-        
-        st.info(f"### 🤖 AI Teaching Strategy\n{advice}")
+        st.success(f"💡 **AI Recommendation:** {advice}")
 
-        # 3. Charts and Data
+        # Charts
         col_left, col_right = st.columns([2, 1])
-        
         with col_left:
-            st.subheader("📊 Gap Analysis by Topic")
+            st.subheader("📊 Gap Analysis")
             st.bar_chart(df['topic'].value_counts(), color="#4A90E2")
-            
         with col_right:
             st.subheader("📝 Recent Log")
             st.dataframe(df[['topic', 'query']].tail(5), hide_index=True)
