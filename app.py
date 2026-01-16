@@ -94,6 +94,8 @@ with st.sidebar:
         st.error("⚠️ Danger Zone")
         if st.button("🗑️ Reset All Data"):
             clear_data()
+            if 'chat_history' in st.session_state:
+                st.session_state['chat_history'] = []
             st.success("Database Cleared!")
             st.rerun()
             
@@ -131,20 +133,28 @@ elif role == "Faculty View":
     if password == "1234":
         df = load_data()
         
-        if df.empty:
-            st.info("👋 No data yet. The database is clean. Go to Student View to start.")
-        else:
-            # 1. Metrics
-            col1, col2, col3 = st.columns(3)
+        # --- TOP METRICS ---
+        col1, col2, col3 = st.columns(3)
+        
+        if not df.empty:
             top_topic = df['topic'].mode()[0]
-            with col1: st.metric("Total Questions", len(df))
-            with col2: st.metric("Primary Learning Gap", top_topic)
-            last_active = pd.to_datetime(df['timestamp']).max().strftime("%H:%M")
-            with col3: st.metric("Last Activity", last_active)
+            total_q = len(df)
+            last_active = pd.to_datetime(df['timestamp']).max()
+            if not isinstance(last_active, str): 
+                last_active = last_active.strftime("%H:%M")
+        else:
+            top_topic = "None"
+            total_q = 0
+            last_active = "--:--"
 
-            st.markdown("---")
+        with col1: st.metric("Total Questions", total_q)
+        with col2: st.metric("Primary Learning Gap", top_topic)
+        with col3: st.metric("Last Activity", last_active)
 
-            # 2. Recommendations
+        st.markdown("---")
+
+        # --- RECOMMENDATIONS ---
+        if not df.empty:
             recommendations = {
                 "Computing": "🔴 **Critical Gap:** Students struggling with Coding. **Action:** Schedule live coding.",
                 "Humanities": "🟠 **Moderate Gap:** Confusion on History/Dates. **Action:** Upload timeline chart.",
@@ -154,78 +164,75 @@ elif role == "Faculty View":
             advice = recommendations.get(top_topic, "⚪ Monitoring: No specific trend yet.")
             st.success(f"💡 **AI Recommendation:** {advice}")
 
-            # 3. Charts Area
-            col_left, col_right = st.columns(2)
-            with col_left:
+        # --- CHARTS ---
+        if not df.empty:
+            col_chart1, col_chart2 = st.columns(2)
+            with col_chart1:
                 st.subheader("📊 Gap Analysis")
                 st.bar_chart(df['topic'].value_counts(), color="#4A90E2")
-            with col_right:
+            with col_chart2:
                 st.subheader("📈 Activity Trend")
                 st.line_chart(df['topic'].value_counts(), color="#FF4B4B")
 
-            # --- NEW FEATURE: FILTER & URGENCY ---
+            # --- TABLE WITH FILTERS & PAGINATION ---
             st.subheader("📝 Question Log")
             
-            # A. Topic Filter
-            topic_options = ["All Topics"] + list(df['topic'].unique())
-            selected_topic = st.selectbox("🔍 Filter by Subject:", topic_options)
+            # 1. Filter
+            all_topics = ["All Topics"] + list(df['topic'].unique())
+            selected_filter = st.selectbox("🔍 Filter by Subject:", all_topics)
             
-            # Filter Logic
-            filtered_df = df if selected_topic == "All Topics" else df[df['topic'] == selected_topic]
+            if selected_filter == "All Topics":
+                filtered_df = df
+            else:
+                filtered_df = df[df['topic'] == selected_filter]
 
-            # B. Urgency Logic (Add a visual flag)
+            # 2. Urgency Flag
             def flag_urgency(text):
-                urgent_words = ["urgent", "exam", "confused", "hard", "help", "don't understand", "loss"]
+                urgent_words = ["urgent", "exam", "confused", "hard", "fail", "help"]
                 if any(w in text.lower() for w in urgent_words):
                     return "🔴 URGENT"
                 return ""
-
-            # Apply flag to a new column for display
+            
             display_df = filtered_df.copy()
             display_df['status'] = display_df['query'].apply(flag_urgency)
 
-            # Pagination Logic on the FILTERED data
+            # 3. Pagination (5 rows for v4)
             rows_per_page = 5
-            if 'page_number' not in st.session_state:
-                st.session_state.page_number = 0
-
-            # Calculate pages based on filtered length
-            total_pages = max(1, (len(display_df) // rows_per_page) + 1)
+            if 'page_number' not in st.session_state: st.session_state.page_number = 0
             
-            # Ensure page number is valid (e.g., if you filter and have fewer results)
-            if st.session_state.page_number >= total_pages:
-                st.session_state.page_number = 0
-
+            total_pages = max(1, (len(display_df) // rows_per_page) + 1)
+            # Reset if filter changes reduces pages
+            if st.session_state.page_number >= total_pages: st.session_state.page_number = 0
+            
             start_idx = st.session_state.page_number * rows_per_page
             end_idx = start_idx + rows_per_page
             
-            # Show Table (Reverse to see new first)
+            # Reverse for newest first
             final_view = display_df.iloc[::-1].iloc[start_idx:end_idx]
-            
-            # Show Status, Topic, Query, Timestamp
+
             st.dataframe(
-                final_view[['status', 'topic', 'query', 'timestamp']], 
+                final_view[['timestamp', 'status', 'topic', 'query']], 
                 use_container_width=True,
-                column_config={
-                    "status": st.column_config.TextColumn("Status", help="Red flags indicate student confusion"),
-                }
+                column_config={"status": st.column_config.TextColumn("Status")}
             )
 
             # Pagination Controls
-            col_prev, col_page, col_next = st.columns([1, 2, 1])
-            with col_prev:
+            c_prev, c_txt, c_next = st.columns([1, 2, 1])
+            with c_prev:
                 if st.button("⬅️ Previous"):
                     if st.session_state.page_number > 0:
                         st.session_state.page_number -= 1
                         st.rerun()
-            with col_next:
+            with c_next:
                 if end_idx < len(display_df):
                     if st.button("Next ➡️"):
                         st.session_state.page_number += 1
                         st.rerun()
-            with col_page:
+            with c_txt:
                 st.write(f"Page {st.session_state.page_number + 1} of {total_pages}")
-
-            st.markdown("---")
+                
+            # Download
             csv = df.to_csv(index=False).encode('utf-8')
-            st.download_button("📥 Download Full Report", csv, "classroom_data.csv", "text/csv")
+            st.download_button("📥 Download Report", csv, "data.csv", "text/csv")
+        else:
+            st.info("No data available yet. Go to Student View to start.")
