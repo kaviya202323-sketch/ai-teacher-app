@@ -6,7 +6,6 @@ from datetime import datetime
 # --- CONFIGURATION & STYLING ---
 st.set_page_config(page_title="AI Co-Teacher Pro", page_icon="🎓", layout="wide")
 
-# Custom CSS for styling
 st.markdown("""
     <style>
     .main-header {
@@ -55,37 +54,54 @@ def load_data():
     conn.close()
     return df
 
-# Initialize DB
+def clear_data():
+    conn = sqlite3.connect('classroom_data.db')
+    c = conn.cursor()
+    c.execute('DELETE FROM interactions')
+    conn.commit()
+    conn.close()
+
 init_db()
 
 # --- AI LOGIC ---
 def get_ai_response(user_query):
     user_query = user_query.lower()
     
-    # Topic Detection
+    keywords = {
+        "Computing": ["variable", "python", "code", "function", "loop", "algorithm", "data", "ai", "robot", "print", "list", "bug", "schrodinger", "qubit"],
+        "Humanities": ["history", "war", "date", "king", "empire", "napoleon", "british", "rule", "india", "freedom", "gandhi", "1947", "world"],
+        "Science": ["carbon", "properties", "physics", "chemistry", "biology", "cell", "atom", "force", "energy", "fourier", "transform", "math", "equation", "quantum", "superposition"],
+        "Education": ["teach", "class", "exam", "grade", "syllabus", "attendance", "mark"]
+    }
+
     topic = "General"
-    if any(word in user_query for word in ["variable", "python", "code", "function", "loop"]):
-        topic = "Computing"
-    elif any(word in user_query for word in ["history", "war", "date", "king", "empire"]):
-        topic = "Humanities"
-    elif any(word in user_query for word in ["teach", "class", "exam", "grade"]):
-        topic = "Education"
+    for category, words in keywords.items():
+        if any(word in user_query for word in words):
+            topic = category
+            break
         
     answer = f"**[AI Co-Teacher]**: I see you're asking about **{topic}**. Here is a clear explanation for '{user_query}'...\n\n*(Saved to Faculty Database)*"
     return answer, topic
 
 # --- SIDEBAR ---
 with st.sidebar:
-    st.image("https://aadhi.rajalakshmi.org/_next/image?url=%2Fassets%2Fmascot.png&w=256&q=75", width=100)
+    st.image("https://cdn-icons-png.flaticon.com/512/3426/3426653.png", width=100) 
     st.title("Rajalakshmi AI Portal")
     role = st.radio("Select Dashboard:", ["Student View", "Faculty View"])
     st.markdown("---")
-    st.caption("v1.3 Secure Edition | Database Active")
+    
+    if role == "Faculty View":
+        st.error("⚠️ Danger Zone")
+        if st.button("🗑️ Reset All Data"):
+            clear_data()
+            st.success("Database Cleared!")
+            st.rerun()
+            
+    st.caption("v4.0 Master Edition")
 
 # --- STUDENT PAGE ---
 if role == "Student View":
     st.markdown('<div class="main-header">🎓 Student Learning Hub</div>', unsafe_allow_html=True)
-    st.write("Welcome! Ask your questions below. Your professor will use this data to improve classes.")
     
     if 'chat_history' not in st.session_state:
         st.session_state['chat_history'] = []
@@ -106,52 +122,110 @@ if role == "Student View":
             
         st.session_state['chat_history'].append({"role": "assistant", "content": response})
 
-# --- FACULTY PAGE (SECURE) ---
+# --- FACULTY PAGE ---
 elif role == "Faculty View":
     st.markdown('<div class="main-header">👨‍🏫 Faculty Insights Dashboard</div>', unsafe_allow_html=True)
     
-    # --- PASSWORD PROTECTION ---
-    password = st.text_input("Enter Faculty Password to Access:", type="password")
+    password = st.text_input("Enter Faculty Password:", type="password")
     
-    if password != "1234":
-        st.info("🔒 **Access Restricted**: Only authorized faculty members can view this dashboard.")
-        st.stop()  # STOPS the code here if password is wrong
+    if password == "1234":
+        df = load_data()
         
-    # --- IF PASSWORD IS CORRECT, SHOW DASHBOARD ---
-    df = load_data()
-    
-    if df.empty:
-        st.info("👋 No data yet. Switch to Student View and ask questions.")
-    else:
-        # Metrics
-        col1, col2, col3 = st.columns(3)
-        top_topic = df['topic'].mode()[0]
-        
-        with col1:
-            st.metric("Total Questions", len(df))
-        with col2:
-            st.metric("Primary Learning Gap", top_topic)
-        with col3:
-            recent_time = pd.to_datetime(df['timestamp']).max()
-            st.metric("Last Activity", recent_time.strftime("%H:%M"))
+        if df.empty:
+            st.info("👋 No data yet. The database is clean. Go to Student View to start.")
+        else:
+            # 1. Metrics
+            col1, col2, col3 = st.columns(3)
+            top_topic = df['topic'].mode()[0]
+            with col1: st.metric("Total Questions", len(df))
+            with col2: st.metric("Primary Learning Gap", top_topic)
+            last_active = pd.to_datetime(df['timestamp']).max().strftime("%H:%M")
+            with col3: st.metric("Last Activity", last_active)
 
-        st.markdown("---")
+            st.markdown("---")
 
-        # Recommendation
-        recommendations = {
-            "Computing": "🔴 **Critical Gap:** Students struggling with Python Syntax. **Action:** Schedule live coding.",
-            "Humanities": "🟠 **Moderate Gap:** Confusion on Timelines. **Action:** Upload timeline chart.",
-            "Education": "🟢 **Admin Gap:** Exam queries. **Action:** Clarify grading rubric.",
-            "General": "⚪ **Monitoring:** No specific trend."
-        }
-        advice = recommendations.get(top_topic, "Review recent questions.")
-        st.success(f"💡 **AI Recommendation:** {advice}")
+            # 2. Recommendations
+            recommendations = {
+                "Computing": "🔴 **Critical Gap:** Students struggling with Coding. **Action:** Schedule live coding.",
+                "Humanities": "🟠 **Moderate Gap:** Confusion on History/Dates. **Action:** Upload timeline chart.",
+                "Science": "🔵 **Science Gap:** Concepts in Physics/Chem are unclear. **Action:** Show a lab demonstration.",
+                "Education": "🟢 **Admin Gap:** Exam queries. **Action:** Clarify grading rubric."
+            }
+            advice = recommendations.get(top_topic, "⚪ Monitoring: No specific trend yet.")
+            st.success(f"💡 **AI Recommendation:** {advice}")
 
-        # Charts
-        col_left, col_right = st.columns([2, 1])
-        with col_left:
-            st.subheader("📊 Gap Analysis")
-            st.bar_chart(df['topic'].value_counts(), color="#4A90E2")
-        with col_right:
-            st.subheader("📝 Recent Log")
-            st.dataframe(df[['topic', 'query']].tail(5), hide_index=True)
+            # 3. Charts Area
+            col_left, col_right = st.columns(2)
+            with col_left:
+                st.subheader("📊 Gap Analysis")
+                st.bar_chart(df['topic'].value_counts(), color="#4A90E2")
+            with col_right:
+                st.subheader("📈 Activity Trend")
+                st.line_chart(df['topic'].value_counts(), color="#FF4B4B")
+
+            # --- NEW FEATURE: FILTER & URGENCY ---
+            st.subheader("📝 Question Log")
+            
+            # A. Topic Filter
+            topic_options = ["All Topics"] + list(df['topic'].unique())
+            selected_topic = st.selectbox("🔍 Filter by Subject:", topic_options)
+            
+            # Filter Logic
+            filtered_df = df if selected_topic == "All Topics" else df[df['topic'] == selected_topic]
+
+            # B. Urgency Logic (Add a visual flag)
+            def flag_urgency(text):
+                urgent_words = ["urgent", "exam", "confused", "hard", "help", "don't understand", "loss"]
+                if any(w in text.lower() for w in urgent_words):
+                    return "🔴 URGENT"
+                return ""
+
+            # Apply flag to a new column for display
+            display_df = filtered_df.copy()
+            display_df['status'] = display_df['query'].apply(flag_urgency)
+
+            # Pagination Logic on the FILTERED data
+            rows_per_page = 5
+            if 'page_number' not in st.session_state:
+                st.session_state.page_number = 0
+
+            # Calculate pages based on filtered length
+            total_pages = max(1, (len(display_df) // rows_per_page) + 1)
+            
+            # Ensure page number is valid (e.g., if you filter and have fewer results)
+            if st.session_state.page_number >= total_pages:
+                st.session_state.page_number = 0
+
+            start_idx = st.session_state.page_number * rows_per_page
+            end_idx = start_idx + rows_per_page
+            
+            # Show Table (Reverse to see new first)
+            final_view = display_df.iloc[::-1].iloc[start_idx:end_idx]
+            
+            # Show Status, Topic, Query, Timestamp
+            st.dataframe(
+                final_view[['status', 'topic', 'query', 'timestamp']], 
+                use_container_width=True,
+                column_config={
+                    "status": st.column_config.TextColumn("Status", help="Red flags indicate student confusion"),
+                }
+            )
+
+            # Pagination Controls
+            col_prev, col_page, col_next = st.columns([1, 2, 1])
+            with col_prev:
+                if st.button("⬅️ Previous"):
+                    if st.session_state.page_number > 0:
+                        st.session_state.page_number -= 1
+                        st.rerun()
+            with col_next:
+                if end_idx < len(display_df):
+                    if st.button("Next ➡️"):
+                        st.session_state.page_number += 1
+                        st.rerun()
+            with col_page:
+                st.write(f"Page {st.session_state.page_number + 1} of {total_pages}")
+
+            st.markdown("---")
+            csv = df.to_csv(index=False).encode('utf-8')
+            st.download_button("📥 Download Full Report", csv, "classroom_data.csv", "text/csv")
