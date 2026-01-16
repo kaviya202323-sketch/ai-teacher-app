@@ -1,0 +1,75 @@
+🎤 Part 1: The Demo Speech (Script)
+Read this while you show the app. The text in [Bold Brackets] is what you do on screen.
+
+Introduction "Good morning everyone. Today, I am presenting 'AI Co-Teacher Pro'. In a class of 60 students, it is impossible for one teacher to know exactly who is confused and why. Students are often too shy to raise their hands. Our solution bridges this gap using AI."
+
+Step 1: The Student Experience "Let's start with the Student View. Imagine I am a student studying late at night." [Click 'Student View' in Sidebar] "I have a doubt about Physics, but the teacher isn't available. So I ask my AI tutor." [Type: "I am confused about quantum physics"] "The AI gives me an instant, clear answer. But here is the magic—it didn't just answer me. It secretly recorded my confusion in the database."
+
+Step 2: The Faculty Experience (Security) "Now, let's switch to the Professor's perspective." [Click 'Faculty View'] "You'll notice the dashboard is locked. This ensures student data remains private." [Enter Password: 1234]
+
+Step 3: The Analytics Dashboard "Welcome to the Faculty Insights Dashboard.
+
+Top Metrics: Instantly, the teacher sees the 'Primary Learning Gap'. The AI has analyzed all questions and detected that the class is struggling most with Science.
+
+Gap Analysis Chart: This graph visually proves that Science questions (the blue bar) are higher than others."
+
+Step 4: The Smart Features (Urgency & Filter) "But who specifically needs help? [Scroll down to Question Log] "Look at this table. The AI has automatically flagged the last student's query as 🔴 URGENT because they used words like 'confused'. [Click Filter Dropdown -> Select 'Science'] "I can also filter by subject. Before a Science class, I just select 'Science' to see exactly what students are asking about."
+
+Conclusion "In summary, this isn't just a chatbot. It is an intelligent analytics tool that empowers teachers to stop guessing and start addressing real learning gaps. Thank you."
+
+🖥️ Part 2: PowerPoint (PPT) Slides Outline
+Use these 6 slides to structure your presentation.
+
+Slide 1: Title Slide
+
+Title: AI Co-Teacher Pro
+
+Subtitle: Bridging the Gap Between Students & Faculty with Analytics
+
+Presented by: [Your Name / Team Name]
+
+College: Rajalakshmi Engineering College
+
+Slide 2: The Problem
+
+Shyness: Students are afraid to ask "dumb" questions in class.
+
+Scale: One teacher cannot track the individual learning gaps of 60 students.
+
+Delayed Feedback: Teachers often find out students are confused only after the exam failure.
+
+Slide 3: Our Solution
+
+24/7 AI Tutor: Answers student doubts instantly (Chatbot).
+
+Silent Data Collection: Logs every interaction into a secure database.
+
+Smart Analytics: Tells the teacher what to teach next based on real data.
+
+Slide 4: Key Features (Show Screenshots Here)
+
+🔐 Secure Login: Password-protected faculty dashboard.
+
+🚩 Urgency Detection: Auto-flags "Confused" or "Exam" queries.
+
+📊 Gap Analysis: Visual charts showing weak subjects.
+
+🔍 Smart Filters: Drill down by subject (Computing, Science, etc.).
+
+Slide 5: Technical Stack
+
+Python: The core programming language.
+
+Streamlit: For the web interface and dashboard.
+
+Pandas: For data analysis and filtering.
+
+SQLite: For the secure database (backend).
+
+Slide 6: Conclusion
+
+Impact: Reduces teacher workload + Improves student grades.
+
+Future Scope: Adding a mobile app version and voice support.
+
+Final Words: "Any Questions?"
